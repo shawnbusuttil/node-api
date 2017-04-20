@@ -25,6 +25,23 @@ server.post("/todos", (req, res) => {
 	});
 });
 
+// GET /todos
+server.get("/todos", (req, res) => {
+	Todo.find().then((docs) => {
+		res.send({
+			todos: docs,
+			status: 200
+		})
+	}, (e) => {
+		res.status(400).send({
+			error: "Bad request.",
+			status: res.statusCode
+		})
+	});
+
+	
+});
+
 server.listen(3000, () => {
 	console.log("Connected on port 3000.");
 });
