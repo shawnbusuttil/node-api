@@ -71,6 +71,6 @@ server.get("/todos/:id", (req, res) => {
 	});
 });
 
-server.listen(3000, () => {
-	console.log("Connected on port 3000.");
+server.listen(process.env.PORT || 3000, () => {
+	console.log("Connected to server.");
 });
