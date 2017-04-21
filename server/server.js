@@ -2,6 +2,8 @@ const express = require("express");
 const parser = require("body-parser");
 
 const mongoose = require("./../db/mongoose");
+const { ObjectID } = require("mongodb");
+
 const Todo = require("./../model/todo");
 const User = require("./../model/user");
 
@@ -16,9 +18,9 @@ server.post("/todos", (req, res) => {
 	});
 
 	todo.save().then((doc) => {
-		res.send(doc);
+		return res.send(doc);
 	}, (e) => {
-		res.status(400).send({
+		return res.status(400).send({
 			error: "Bad request.",
 			status: res.statusCode
 		});
@@ -28,55 +30,47 @@ server.post("/todos", (req, res) => {
 // GET /todos
 server.get("/todos", (req, res) => {
 	Todo.find().then((docs) => {
-		res.send({
+		return res.status(200).send({
 			todos: docs,
-			status: 200
-		})
+			status: res.statusCode
+		});
+	}, (e) => {
+		return res.status(400).send({
+			error: "Bad request.",
+			status: res.statusCode
+		});
+	});
+});
+
+// GET /todos/:id
+server.get("/todos/:id", (req, res) => {
+	const id = req.params.id;
+	if (!ObjectID.isValid(id)) {
+		return res.status(404).send({
+			error: "Not found.",
+			status: res.statusCode
+		});
+	}
+
+	Todo.findById(id).then((doc) => {
+		if (!doc) {
+			return res.status(404).send({
+				error: "Not found.",
+				status: res.statusCode
+			});
+		}
+		return res.status(200).send({
+			todo: doc,
+			status: res.statusCode
+		});
 	}, (e) => {
 		res.status(400).send({
 			error: "Bad request.",
 			status: res.statusCode
 		})
 	});
-
-	
 });
 
 server.listen(3000, () => {
 	console.log("Connected on port 3000.");
 });
-/*
-
-const newTodo = new Todo({
-	text: "cook dinner"
-});
-
-newTodo.save().then((doc) => {
-	console.log("Saved new todo.", doc);
-}, (e) => {
-	console.log("Unable to save entry.");
-});
-
-const anotherTodo = new Todo({
-	text: "go to gym",
-	completed: false,
-	completedAt: 123
-});
-
-anotherTodo.save().then((doc) => {
-	console.log("Saved new todo.", doc);
-}, (e) => {
-	console.log("Unable to save entry.");
-});
-
-const User = mongoose.model("User", user);
-
-const newUser = new User({
-	email: "abc@test.com"
-});
-
-newUser.save().then((doc) => {
-	console.log("Saved new user.", doc);
-}, (e) => {
-	console.log("Unable to save entry.", e);
-});*/
