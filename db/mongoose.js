@@ -5,7 +5,7 @@ const devUrl = "mongodb://localhost:27017/TodoDB";
 
 mongoose.Promise = global.Promise;
 console.log(process.env.MONGODB_URI);
-mongoose.connect(process.env.MONGODB_URI || devUrl);
+mongoose.connect(process.env.MONGODB_URI || productionUrl || devUrl);
 
 mongoose.exports = {
 	mongoose: mongoose
