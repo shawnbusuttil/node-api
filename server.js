@@ -1,18 +1,21 @@
 const express = require("express");
 const parser = require("body-parser");
 
-const mongoose = require("./../db/mongoose");
+const mongoose = require("./db/mongoose");
 const { ObjectID } = require("mongodb");
 
-const Todo = require("./../model/todo");
-const User = require("./../model/user");
+const Todo = require("./model/todo");
+const User = require("./model/user");
 
 const server = express();
+const router = express.Router();
 
-server.use(parser.json());
+server.use(router);
+
+router.use(parser.json());
 
 // POST /todos
-server.post("/todos", (req, res) => {
+router.post("/todos", (req, res) => {
 	const todo = new Todo({
 		text: req.body.text
 	});
@@ -28,7 +31,7 @@ server.post("/todos", (req, res) => {
 });
 
 // GET /todos
-server.get("/todos", (req, res) => {
+router.get("/todos", (req, res) => {
 	Todo.find().then((docs) => {
 		return res.status(200).send({
 			todos: docs,
@@ -43,7 +46,7 @@ server.get("/todos", (req, res) => {
 });
 
 // GET /todos/:id
-server.get("/todos/:id", (req, res) => {
+router.get("/todos/:id", (req, res) => {
 	const id = req.params.id;
 	if (!ObjectID.isValid(id)) {
 		return res.status(404).send({

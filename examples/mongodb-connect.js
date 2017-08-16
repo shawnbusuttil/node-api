@@ -1,4 +1,4 @@
-const { MongoClient, ObjectID } = require("mongodb").MongoClient;
+const { MongoClient, ObjectID } = require("mongodb");
 
 MongoClient.connect("mongodb://localhost:27017/TodoDB", (error, db) => {
 	if (error) {
@@ -7,7 +7,7 @@ MongoClient.connect("mongodb://localhost:27017/TodoDB", (error, db) => {
 
 	console.log("Connected to MongoDB server.");
 
-	/*db.collection("Todos").insertOne({
+	db.collection("Todos").insertOne({
 		text: "Something to do",
 		completed: false
 	}, (error ,result) => {
@@ -16,7 +16,7 @@ MongoClient.connect("mongodb://localhost:27017/TodoDB", (error, db) => {
 		}
 
 		console.log(JSON.stringify(result.ops, undefined, 2));
-	});*/
+	});
 
 	db.collection("Users").insertOne({
 		name: "Shawn",
