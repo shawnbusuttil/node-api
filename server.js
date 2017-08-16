@@ -1,3 +1,4 @@
+const _ = require("lodash");
 const express = require("express");
 const parser = require("body-parser");
 
@@ -70,7 +71,67 @@ router.get("/todos/:id", (req, res) => {
 		res.status(400).send({
 			error: "Bad request.",
 			status: res.statusCode
-		})
+		});
+	});
+});
+
+// DELETE /todos/:id
+router.delete("/todos/:id", (req, res) => {
+	const id = req.params.id;
+	if (!ObjectID.isValid(id)) {
+		return res.status(404).send({
+			error: "Not found.",
+			status: res.statusCode
+		});
+	}
+
+	Todo.findByIdAndRemove(id).then((doc) => {
+		if (!doc) {
+			return res.status(404).send({
+				error: "Not found.",
+				status: res.statusCode
+			});
+		}
+		return res.status(200).send({
+			todo: doc,
+			status: res.status
+		});
+	}, (e) => {
+		res.status(400).send({
+			error: "Bad request.",
+			status: res.statusCode
+		});
+	})
+});
+
+// PATCH /todos/:id
+router.patch("/todos/:id", (req, res) => {
+	var id = req.params.id;
+	var body = _.pick(req.body, ["text", "completed"]);
+
+	if (!ObjectID.isValid(id)) {
+		return res.status(404).send({
+			error: "Not found.",
+			status: res.statusCode
+		});
+	}
+
+	Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((doc) => {
+		if (!doc) {
+			return res.status(404).send({
+				error: "Not found.",
+				status: res.statusCode
+			});
+		}
+		return res.status(200).send({
+			todo: doc,
+			status: res.statusCode
+		});
+	}, (e) => {
+		res.status(400).send({
+			error: "Bad request.",
+			status: res.statusCode
+		});
 	});
 });
 
