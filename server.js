@@ -1,3 +1,16 @@
+const env = process.env.NODE_ENV || "dev";
+
+if (env === "dev") {
+	process.env.PORT = 3000;
+	process.env.MONGODB_URI = "mongodb://localhost:27017/TodoDB";
+}
+else {
+	process.env.MONGODB_URI = "mongodb://shawn92:admin@ds147799.mlab.com:47799/todos-db";
+}
+
+console.log(process.env.PORT);
+console.log(process.env.MONGODB_URI);
+
 const _ = require("lodash");
 const express = require("express");
 const parser = require("body-parser");
@@ -18,7 +31,8 @@ router.use(parser.json());
 // POST /todos
 router.post("/todos", (req, res) => {
 	const todo = new Todo({
-		text: req.body.text
+		text: req.body.text,
+		completed: req.body.text
 	});
 
 	todo.save().then((doc) => {
