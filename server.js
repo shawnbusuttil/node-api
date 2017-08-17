@@ -15,6 +15,7 @@ const _ = require("lodash");
 const express = require("express");
 const parser = require("body-parser");
 
+const auth = require("./security/jwt");
 const mongoose = require("./db/mongoose");
 const { ObjectID } = require("mongodb");
 
@@ -120,8 +121,8 @@ router.delete("/todos/:id", (req, res) => {
 
 // PATCH /todos/:id
 router.patch("/todos/:id", (req, res) => {
-	var id = req.params.id;
-	var body = _.pick(req.body, ["text", "completed"]);
+	const id = req.params.id;
+	const body = _.pick(req.body, ["text", "completed"]);
 
 	if (!ObjectID.isValid(id)) {
 		return res.status(404).send({
@@ -144,6 +145,27 @@ router.patch("/todos/:id", (req, res) => {
 	}, (e) => {
 		res.status(400).send({
 			error: "Bad request.",
+			status: res.statusCode
+		});
+	});
+});
+
+// POST /users
+router.post("/users", (req, res) => {
+	const body = _.pick(req.body, ["email", "password"]);
+	const user = new User(body);
+
+	user.save().then(user => {
+		return auth.generateAuthToken(user).then(authToken => {
+			user.tokens.push(authToken);
+			user.save().then(() => {
+				const data = _.pick(user, ["_id", "email"]);
+				res.header("x-auth", authToken.token).send(data);
+			});
+		});
+	}, (e) => {
+		return res.status(400).send({
+			error: e,
 			status: res.statusCode
 		});
 	});
