@@ -29,6 +29,21 @@ server.use(router);
 
 router.use(parser.json());
 
+const authenticate = (req, res, next) => {
+	const token = req.header("x-auth");
+
+	return auth.verifyAuthToken(token).then(authToken => {
+		User.findOne({
+			"_id": authToken.decoded,
+			"tokens.access": authToken.access
+		}).then(user => {
+			req.user = _.pick(user, ["_id", "email"]);
+			req.token = token;
+			next();
+		});
+	}, e => res.status(401).send()); // else send unauthorized
+};
+
 // POST /todos
 router.post("/todos", (req, res) => {
 	const todo = new Todo({
@@ -169,6 +184,11 @@ router.post("/users", (req, res) => {
 			status: res.statusCode
 		});
 	});
+});
+
+// GET /users/me
+router.get("/users/me", authenticate, (req, res) => {
+	res.send(req.user);
 });
 
 server.listen(process.env.PORT || 3000, () => {

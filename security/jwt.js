@@ -16,6 +16,22 @@ function generateAuthToken(user) {
 	});
 }
 
+function verifyAuthToken(token) {
+	let decoded;
+
+	try {
+		decoded = jwt.verify(token, salt);
+		return Promise.resolve({
+			decoded: decoded.id,
+			access: "auth"
+		});
+	}
+	catch (e) {
+		return Promise.reject();
+	}
+}
+
 module.exports = {
-	generateAuthToken
+	generateAuthToken,
+	verifyAuthToken
 }
