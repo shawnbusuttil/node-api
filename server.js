@@ -14,6 +14,7 @@ console.log(process.env.MONGODB_URI);
 const _ = require("lodash");
 const express = require("express");
 const parser = require("body-parser");
+const bcrypt = require("bcryptjs");
 
 const auth = require("./security/jwt");
 const mongoose = require("./db/mongoose");
@@ -29,6 +30,25 @@ server.use(router);
 
 router.use(parser.json());
 
+const login = (email, password) => {
+	return User.findOne({email}).then(user => {
+		if (!user) {
+			return Promise.reject("User does not exist.");
+		}
+
+		return new Promise((resolve, reject) => {
+			bcrypt.compare(password, user.password, (err, res) => {
+				if (res) {
+					resolve(user);
+				}
+				else {
+					reject("Incorrect password.");
+				}
+			});
+		});
+	});
+};
+
 const authenticate = (req, res, next) => {
 	const token = req.header("x-auth");
 
@@ -43,6 +63,11 @@ const authenticate = (req, res, next) => {
 		});
 	}, e => res.status(401).send()); // else send unauthorized
 };
+
+const hashPassword = (password) => {
+	const salt = bcrypt.genSaltSync(10);
+	return bcrypt.hashSync(password, salt);
+}
 
 // POST /todos
 router.post("/todos", (req, res) => {
@@ -168,7 +193,11 @@ router.patch("/todos/:id", (req, res) => {
 // POST /users
 router.post("/users", (req, res) => {
 	const body = _.pick(req.body, ["email", "password"]);
-	const user = new User(body);
+
+	const user = new User({
+		email: body.email, 
+		password: hashPassword(body.password)
+	});
 
 	user.save().then(user => {
 		return auth.generateAuthToken(user).then(authToken => {
@@ -189,6 +218,22 @@ router.post("/users", (req, res) => {
 // GET /users/me
 router.get("/users/me", authenticate, (req, res) => {
 	res.send(req.user);
+});
+
+// POST /users/login
+router.post("/users/login", (req, res) => {
+	const body = _.pick(req.body, ["email", "password"]);
+	login(body.email, body.password).then((user) => {
+		return auth.generateAuthToken(user).then(authToken => {
+			const data = _.pick(user, ["_id", "email"]);
+			res.header("x-auth", authToken.token).send(data);
+		});
+	}, (e) => {
+		return res.status(400).send({
+			error: e,
+			status: res.statusCode
+		});
+	});
 });
 
 server.listen(process.env.PORT || 3000, () => {
