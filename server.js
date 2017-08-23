@@ -6,9 +6,9 @@ if (env === "dev") {
 	process.env.MONGODB_URI = config.dev.MONGODB_URI;
 	process.env.JWT_SECRET = config.dev.JWT_SECRET;
 }
-else {
-	process.env.MONGODB_URI = "mongodb://shawn92:admin@ds147799.mlab.com:47799/todos-db";
-}
+// else {
+// 	process.env.MONGODB_URI = "mongodb://shawn92:admin@ds147799.mlab.com:47799/todos-db";
+// }
 
 console.log(process.env.PORT);
 console.log(process.env.MONGODB_URI);
