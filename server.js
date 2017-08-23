@@ -1,11 +1,13 @@
 const env = process.env.NODE_ENV || "dev";
 
 if (env === "dev") {
-	process.env.PORT = 3000;
-	process.env.MONGODB_URI = "mongodb://localhost:27017/TodoDB";
+	const config = require("./config/config.json");
+	process.env.PORT = config.dev.PORT;
+	process.env.MONGODB_URI = config.dev.MONGODB_URI;
+	process.env.JWT_SECRET = config.dev.JWT_SECRET;
 }
 else {
-	process.env.MONGODB_URI = "mongodb://shawn92:admin@ds147799.mlab.com:47799/todos-db";
+	//process.env.MONGODB_URI = "mongodb://shawn92:admin@ds147799.mlab.com:47799/todos-db";
 }
 
 console.log(process.env.PORT);
@@ -49,19 +51,33 @@ const login = (email, password) => {
 	});
 };
 
+const logout = (user, token) => {
+	return User.findByIdAndUpdate(user._id, {
+		$pull: {
+			tokens: {
+				token: token
+			}
+		}
+	});
+};
+
 const authenticate = (req, res, next) => {
 	const token = req.header("x-auth");
 
 	return auth.verifyAuthToken(token).then(authToken => {
+		console.log(token);
 		User.findOne({
 			"_id": authToken.decoded,
 			"tokens.access": authToken.access
 		}).then(user => {
+			if (!user) {
+				return res.status(401).send();
+			}
 			req.user = _.pick(user, ["_id", "email"]);
 			req.token = token;
 			next();
 		});
-	}, e => res.status(401).send()); // else send unauthorized
+	}, (e) => res.status(401).send()); // else send unauthorized
 };
 
 const hashPassword = (password) => {
@@ -70,10 +86,11 @@ const hashPassword = (password) => {
 }
 
 // POST /todos
-router.post("/todos", (req, res) => {
+router.post("/todos", authenticate, (req, res) => {
 	const todo = new Todo({
 		text: req.body.text,
-		completed: req.body.text
+		completed: req.body.completed,
+		_creator: req.user._id
 	});
 
 	todo.save().then((doc) => {
@@ -87,8 +104,10 @@ router.post("/todos", (req, res) => {
 });
 
 // GET /todos
-router.get("/todos", (req, res) => {
-	Todo.find().then((docs) => {
+router.get("/todos", authenticate, (req, res) => {
+	Todo.find({
+		_creator: req.user._id
+	}).then((docs) => {
 		return res.status(200).send({
 			todos: docs,
 			status: res.statusCode
@@ -102,7 +121,7 @@ router.get("/todos", (req, res) => {
 });
 
 // GET /todos/:id
-router.get("/todos/:id", (req, res) => {
+router.get("/todos/:id", authenticate, (req, res) => {
 	const id = req.params.id;
 	if (!ObjectID.isValid(id)) {
 		return res.status(404).send({
@@ -111,7 +130,10 @@ router.get("/todos/:id", (req, res) => {
 		});
 	}
 
-	Todo.findById(id).then((doc) => {
+	Todo.findOne({
+		_id: id,
+		_creator: req.user._id
+	}).then((doc) => {
 		if (!doc) {
 			return res.status(404).send({
 				error: "Not found.",
@@ -131,7 +153,7 @@ router.get("/todos/:id", (req, res) => {
 });
 
 // DELETE /todos/:id
-router.delete("/todos/:id", (req, res) => {
+router.delete("/todos/:id", authenticate, (req, res) => {
 	const id = req.params.id;
 	if (!ObjectID.isValid(id)) {
 		return res.status(404).send({
@@ -140,7 +162,10 @@ router.delete("/todos/:id", (req, res) => {
 		});
 	}
 
-	Todo.findByIdAndRemove(id).then((doc) => {
+	Todo.findByOneAndRemove({
+		_id: id,
+		_creator: req.user._id
+	}).then((doc) => {
 		if (!doc) {
 			return res.status(404).send({
 				error: "Not found.",
@@ -160,7 +185,7 @@ router.delete("/todos/:id", (req, res) => {
 });
 
 // PATCH /todos/:id
-router.patch("/todos/:id", (req, res) => {
+router.patch("/todos/:id", authenticate, (req, res) => {
 	const id = req.params.id;
 	const body = _.pick(req.body, ["text", "completed"]);
 
@@ -171,7 +196,10 @@ router.patch("/todos/:id", (req, res) => {
 		});
 	}
 
-	Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((doc) => {
+	Todo.findOneAndUpdate({
+		_id: id,
+		_creator: req.user._id
+	}, {$set: body}, {new: true}).then((doc) => {
 		if (!doc) {
 			return res.status(404).send({
 				error: "Not found.",
@@ -225,8 +253,11 @@ router.post("/users/login", (req, res) => {
 	const body = _.pick(req.body, ["email", "password"]);
 	login(body.email, body.password).then((user) => {
 		return auth.generateAuthToken(user).then(authToken => {
-			const data = _.pick(user, ["_id", "email"]);
-			res.header("x-auth", authToken.token).send(data);
+			user.tokens.push(authToken);
+			user.save().then(() => {
+				const data = _.pick(user, ["_id", "email"]);
+				res.header("x-auth", authToken.token).send(data);
+			});
 		});
 	}, (e) => {
 		return res.status(400).send({
@@ -235,6 +266,18 @@ router.post("/users/login", (req, res) => {
 		});
 	});
 });
+
+// DELETE /users/logout
+router.delete("/users/logout", authenticate, (req, res) => {
+	const user = req.user;
+	const token = req.token;
+
+	logout(user, token).then(() => {
+		res.status(200).send();
+	}, (e) => {
+		res.status(400).send();
+	});
+})
 
 server.listen(process.env.PORT || 3000, () => {
 	console.log("Connected to server.");

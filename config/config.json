@@ -1,0 +1,7 @@
+{
+	"dev": {
+		"PORT": 3000,
+		"MONGODB_URI": "mongodb://localhost:27017/TodoDB",
+		"JWT_SECRET": "salt"
+	}
+}
